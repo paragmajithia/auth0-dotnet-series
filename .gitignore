@@ -426,3 +426,10 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Claude Code project files (local only)
+CLAUDE.md
+series-bible.md
+
+# JetBrains Rider per-user IDE settings
+.idea/
