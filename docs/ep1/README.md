@@ -1,10 +1,24 @@
 # Episode 1: AuthN vs AuthZ, OIDC, JWT, Auth0 + .NET basics
 
-Status: Stage 1 (Concept) and Stage 2 (Auth0 setup) done. Later stages are added below as they are finished.
+This episode builds the start of **DocShare**, a small document-sharing API with synthetic data (fake orgs Acme and Globex, fake users and documents). You will log in with Auth0, get a JWT access token, and have a .NET API accept or refuse requests based on the permissions in that token.
+
+**What you need**
+- A free [Auth0](https://auth0.com) account
+- The .NET 10 SDK (check with `dotnet --list-sdks`)
+- An editor such as JetBrains Rider or VS Code
+- Basic knowledge of OAuth (what a token is)
+
+**How to read this**
+1. **Concept:** what authentication, authorization, OIDC and JWT are.
+2. **Auth0 setup:** click-by-click dashboard steps.
+3. **Code:** the two .NET projects.
+
+Click a section to expand or collapse it.
 
 ---
 
-## Stage 1: Concept
+<details>
+<summary><strong>Part 1: Concept</strong></summary>
 
 ### AuthN vs AuthZ
 
@@ -21,20 +35,24 @@ OIDC is a thin identity layer on top of OAuth 2.0. OAuth alone says what a token
 ### The flow (Authorization Code + PKCE)
 
 ```
-Browser        DocShare.Web      Auth0         DocShare.Api
-   |  open app      |              |                |
-   |--------------->|              |                |
-   |  redirect to /authorize       |                |
-   |<--------------|------------->|                |
-   |  login (Alice)                |                |
-   |------------------------------>|                |
-   |  redirect back with ?code=    |                |
-   |<------------------------------|                |
-   |        |-- code -> tokens --->|                |
-   |        |<- ID + access token -|                |
-   |        |-- GET /documents + Bearer token ----->|
-   |        |        validate JWT + check permission|
-   |        |<-------------- 200 or 403 ------------|
+Browser       DocShare.Web        Auth0        DocShare.Api
+   |  1. open app    |                |               |
+   |---------------->|                |               |
+   |  2. redirect to Auth0 login      |               |
+   |<----------------|                |               |
+   |  3. log in (Alice)               |               |
+   |--------------------------------->|               |
+   |  4. redirect back with ?code=    |               |
+   |<---------------------------------|               |
+   |  5. send code   |                |               |
+   |---------------->|                |               |
+   |                 |  6. code in, ID + access token out
+   |                 |<-------------->|               |
+   |                 |  7. GET /documents + Bearer token
+   |                 |------------------------------->|
+   |                 |  8. API validates JWT, checks permission
+   |                 |  9. 200 or 403                 |
+   |                 |<-------------------------------|
 ```
 
 - **Web app:** handles the login and stores the tokens.
@@ -63,7 +81,7 @@ A JWT is three base64url parts: `header.payload.signature`. The API checks the s
 
 ### How it maps to .NET
 
-Previews only. The real code is in Stage 3.
+Previews only. The real code is in Part 3.
 
 **1. Authentication: validate the JWT**
 ```csharp
@@ -105,9 +123,10 @@ app.MapGet("/documents", () => Results.Ok()).RequireAuthorization("read:document
 | 401 | Not authenticated: no token, or the token is invalid |
 | 403 | Authenticated, but not allowed |
 
----
+</details>
 
-## Stage 2: Auth0 setup
+<details>
+<summary><strong>Part 2: Auth0 setup</strong></summary>
 
 Dashboard labels move occasionally, so treat names as a guide. Never commit secrets. The Client Secret goes only into user-secrets.
 
@@ -144,7 +163,7 @@ We register two things in Auth0, and they have different jobs:
 
 ### Step 3: Add permissions
 
-**Why:** permissions are the fine-grained actions the API can check. They end up in the token's `permissions` claim and drive the policies in Stage 3.
+**Why:** permissions are the fine-grained actions the API can check. They end up in the token's `permissions` claim and drive the policies in Part 3.
 
 In the API's **Permissions** tab:
 
@@ -177,7 +196,7 @@ The web app does the AuthN (logs the user in). The API from Step 2 does the Auth
 
 1. **Applications → Applications → Create Application**.
 2. Name: `DocShare Web`. Type: **Regular Web Applications**. We use a server-side app, not a SPA: the whole demo stays in C#, the Client Secret lives in user-secrets, and tokens never reach the browser.
-3. In **Settings**, enter the URLs below. `7001` is a placeholder port. In Stage 3 we create the project, check the real HTTPS port in `launchSettings.json`, and come back here to update these three URLs if it differs:
+3. In **Settings**, enter the URLs below. `DocShare.Web` runs on HTTPS port 7001 (set in its `launchSettings.json`), so these URLs must use that port:
 
 | Field | Value |
 |---|---|
@@ -203,7 +222,7 @@ The web app does the AuthN (logs the user in). The API from Step 2 does the Auth
 
 **Why:** our code needs to know which tenant, which app and which API to talk to. These values are the link between the Auth0 dashboard and the C# project.
 
-Nothing to edit in code yet. The project and `appsettings.json` are created in Stage 3. For now, just note these values somewhere private (a notes app is fine). The "Goes to" column shows where each one ends up later.
+Note these values somewhere private (a notes app is fine). You will use them when you configure the projects. The "Goes to" column shows where each one ends up.
 
 **Which application do I open?** Go to **Applications → Applications**. You will see three entries:
 
@@ -221,11 +240,11 @@ Open **DocShare Web → Settings** and copy from the **Basic Information** secti
 | Web app client ID | DocShare Web → Settings → Client ID | Identifies our app to Auth0 (public, not a secret) | appsettings |
 | Web app client secret | DocShare Web → Settings → Client Secret | Proves to Auth0 that the request really comes from our server | user-secrets only |
 | API audience | `https://docshare-api` (the identifier you chose in Step 2, not found in this app) | Says which API the access token is for | appsettings |
-| API permissions | `read:documents`, `write:documents`, `share:documents` | Used in policies in Stage 3 | series-bible A8 |
+| API permissions | `read:documents`, `write:documents`, `share:documents` | Used in policies in Part 3 | The API code |
 
 Domain and Client ID are not secrets, so they are safe to show. The Client Secret never goes in the repo or in chat.
 
-Preview of the `appsettings.json` we create in Stage 3 (the secret is set with `dotnet user-secrets`):
+The values go into `appsettings.json` like this (the secret is set with `dotnet user-secrets`). Use your own tenant's values:
 ```json
 {
   "Auth0": {
@@ -236,29 +255,72 @@ Preview of the `appsettings.json` we create in Stage 3 (the secret is set with `
 }
 ```
 
-Example with the real, non-secret values from our demo tenant. Use your own:
-```json
-{
-  "Auth0": {
-    "Domain": "dev-ev6nkpg558gup6nd.us.auth0.com",
-    "Audience": "https://docshare-api",
-    "ClientId": "3S8XGZYv3itsfBqbsfIOk0aWgG1r6QkO"
-  }
-}
-```
-
 ### Step 8: Sanity check (no code yet)
 
-**Why:** catch setup mistakes now, such as a wrong audience or a missing claim, before they look like code bugs in Stage 3.
+**Why:** catch setup mistakes now, such as a wrong audience or a missing claim, before they look like code bugs in Part 3.
 
 1. On the API's **Test** tab, copy the sample token.
 2. Paste it into jwt.io. Check that `aud` is `https://docshare-api` and `iss` is your tenant.
-3. That token comes from a machine-to-machine app, so it only has permissions if you grant them to that app. Tokens for users with roles are tested in Stage 4, once login works.
+3. That token comes from a machine-to-machine app, so it only has permissions if you grant them to that app. Tokens for users with roles are tested in Part 4, once login works.
 
-### Checklist
-- [ ] Tenant created, friendly name set to `authseries-dev`
-- [ ] API created, RBAC and "Add Permissions in the Access Token" on
-- [ ] 3 permissions and 3 roles created
-- [ ] `DocShare Web` created with callback and logout URLs
-- [ ] 3 fake users created and assigned roles
-- [ ] Domain, audience and client ID noted; secret kept out of Git and chat
+</details>
+
+<details>
+<summary><strong>Part 3: Code</strong></summary>
+
+Target: .NET 10 (newest LTS). Two projects in `DocShare.slnx`.
+
+| Project | Role | HTTPS port |
+|---|---|---|
+| `src/DocShare.Api` | JWT-protected minimal API | 7002 |
+| `src/DocShare.Web` | Server-side login client (Regular Web App) | 7001 (matches Auth0 callback URLs) |
+
+Packages: `Microsoft.AspNetCore.Authentication.JwtBearer` (Api), `Auth0.AspNetCore.Authentication` (Web).
+
+### Folder layout
+
+```
+DocShare.slnx
+src/
+  DocShare.Api/
+    Program.cs        JWT validation, policies, endpoints
+    Documents.cs      in-memory fake documents (Acme, Globex)
+    appsettings.json  Auth0 Domain and Audience
+  DocShare.Web/
+    Program.cs        Auth0 login, claims page, Call API
+    appsettings.json  Auth0 Domain, ClientId, Audience, API address
+```
+
+Read the code: [DocShare.Api/Program.cs](../../src/DocShare.Api/Program.cs) and [DocShare.Web/Program.cs](../../src/DocShare.Web/Program.cs). Each part has a one-line comment saying why it exists.
+
+In `appsettings.json` of both projects, replace the Domain (and the web app's ClientId) with your own tenant's values from Part 2.
+
+### API endpoints
+
+| Endpoint | Policy | No token | Token without permission |
+|---|---|---|---|
+| `GET /health` | none (public) | 200 | 200 |
+| `GET /documents` | `read:documents` | 401 | 403 |
+| `POST /documents` | `write:documents` | 401 | 403 |
+| `POST /documents/{id}/share` | `share:documents` | 401 | 403 |
+
+### Web pages
+
+| Page | What it does |
+|---|---|
+| `/` | Home with login link |
+| `/login`, `/logout` | Auth0 login and logout (callback path `/callback`) |
+| `/profile` | Shows the logged-in user's claims |
+| `/call-api` | Sends the access token to `GET /documents`, shows status and body |
+
+### Client secret (never in a file)
+
+Run once, with your own value from DocShare Web → Settings → Client Secret:
+
+```bash
+dotnet user-secrets set "Auth0:ClientSecret" "<your-client-secret>" --project src/DocShare.Web
+```
+
+User-secrets are stored outside the repo, so the secret is never committed. Next, Part 4 runs both projects and tests them.
+
+</details>

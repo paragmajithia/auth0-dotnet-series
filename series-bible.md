@@ -72,7 +72,7 @@ auth0-dotnet-series/
 ## A9. Episodes
 | Ep | Topic | Must cover | Status |
 |---|---|---|---|
-| 1 | AuthN vs AuthZ, OIDC, JWT, Auth0 + .NET basics | Login, JWT-protected API, permissions, policy-based authz | In progress: Stages 1-2 done, Stage 3 next |
+| 1 | AuthN vs AuthZ, OIDC, JWT, Auth0 + .NET basics | Login, JWT-protected API, permissions, policy-based authz | In progress: Stages 1-3 done, Stage 4 next |
 | 2 | Multi-tenant with Auth0 Organizations | Per-tenant login, org claim in token, tenant isolation in API | Not started |
 | 3 | Fine-grained authz with OpenFGA | Relationship model, check API, RBAC vs ReBAC | Not started |
 | 4 | Secure a C# MCP server with Auth0 | OAuth 2.1 for MCP, discovery, client registration, scopes, MCP Inspector | Not started |
