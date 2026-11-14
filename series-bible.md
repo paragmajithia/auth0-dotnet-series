@@ -41,7 +41,8 @@ No real company data, ever.
 ```
 auth0-dotnet-series/
   series-bible.md
-  CLAUDE.md
+  AGENTS.md              # project rules (single source of truth)
+  CLAUDE.md              # one line: @AGENTS.md (local only, gitignored)
   src/
     DocShare.Api/        # ASP.NET Core API (Ep 1+)
     DocShare.Web/        # simple login client (Ep 1, 2)
@@ -54,24 +55,24 @@ auth0-dotnet-series/
 
 ## A7. Conventions
 - Config in appsettings.json and user-secrets. Secrets never in Git.
-- Auth0 names: tenant `authseries-dev`, API audience `https://docshare-api`.
+- Auth0 names: tenant friendly name `authseries-dev` (the real tenant name is auto-generated and fixed), API audience `https://docshare-api`.
 - Permissions named `read:documents`, `write:documents`, `share:documents`.
 - Each episode adds code to the same repo, never a rewrite.
 
 ## A8. Auth0 settings table (names only, no secrets)
 | Setting | Value |
 |---|---|
-| Tenant domain | |
+| Tenant domain | dev-ev6nkpg558gup6nd.us.auth0.com |
 | API audience | https://docshare-api |
-| API permissions | |
-| Web app client ID | |
+| API permissions | read:documents, write:documents, share:documents |
+| Web app client ID | 3S8XGZYv3itsfBqbsfIOk0aWgG1r6QkO |
 | Organizations | |
 | FGA store | |
 
 ## A9. Episodes
 | Ep | Topic | Must cover | Status |
 |---|---|---|---|
-| 1 | AuthN vs AuthZ, OIDC, JWT, Auth0 + .NET basics | Login, JWT-protected API, permissions, policy-based authz | Not started |
+| 1 | AuthN vs AuthZ, OIDC, JWT, Auth0 + .NET basics | Login, JWT-protected API, permissions, policy-based authz | In progress: Stages 1-2 done, Stage 3 next |
 | 2 | Multi-tenant with Auth0 Organizations | Per-tenant login, org claim in token, tenant isolation in API | Not started |
 | 3 | Fine-grained authz with OpenFGA | Relationship model, check API, RBAC vs ReBAC | Not started |
 | 4 | Secure a C# MCP server with Auth0 | OAuth 2.1 for MCP, discovery, client registration, scopes, MCP Inspector | Not started |
