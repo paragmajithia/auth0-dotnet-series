@@ -429,7 +429,6 @@ FodyWeavers.xsd
 
 # Claude Code project files (local only)
 CLAUDE.md
-series-bible.md
 prompts.md
 
 # JetBrains Rider per-user IDE settings
