@@ -1,0 +1,32 @@
+# Run both projects locally:  docker compose -f deploy/docker-compose.yml up --build
+# Values come from deploy/.env (copy deploy/.env.example, never commit it).
+
+services:
+  docshare-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    # Why: host port 7002 matches the local `dotnet run` setup.
+    ports:
+      - "7002:8080"
+
+  docshare-web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    # Why: host port 7001 keeps the Auth0 callback and logout URLs unchanged.
+    ports:
+      - "7001:8443"
+    environment:
+      # Why: in a container, user-secrets are not available, so the secret arrives as an environment variable.
+      Auth0__ClientSecret: ${AUTH0_CLIENT_SECRET:?Set AUTH0_CLIENT_SECRET in deploy/.env}
+      # Why: containers reach each other by service name on the compose network, not by localhost.
+      DocShareApi__BaseUrl: http://docshare-api:8080
+      # Why: tell Kestrel which certificate to use for HTTPS.
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/aspnetapp.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${CERT_PASSWORD:?Set CERT_PASSWORD in deploy/.env}
+    volumes:
+      # Why: mount the exported dev certificate read-only instead of copying it into the image.
+      - ./certs:/https:ro
+    depends_on:
+      - docshare-api

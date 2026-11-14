@@ -1,0 +1,22 @@
+# Build context is the repo root (see docker-compose.yml).
+
+# Why: the SDK image compiles the app; the small runtime image below only runs it.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Why: copy the .csproj first so the restore layer is cached until packages change.
+COPY src/DocShare.Web/DocShare.Web.csproj src/DocShare.Web/
+RUN dotnet restore src/DocShare.Web/DocShare.Web.csproj
+
+COPY src/DocShare.Web/ src/DocShare.Web/
+RUN dotnet publish src/DocShare.Web/DocShare.Web.csproj -c Release -o /app --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+COPY --from=build /app .
+
+# Why: HTTPS inside the container, so the login callback stays https://localhost:7001/callback.
+# The certificate itself is mounted at run time (see docker-compose.yml), never baked into the image.
+ENV ASPNETCORE_URLS=https://+:8443
+EXPOSE 8443
+ENTRYPOINT ["dotnet", "DocShare.Web.dll"]

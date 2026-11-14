@@ -21,7 +21,7 @@ A 6-episode blog and YouTube series (paragmajithia.com) teaching modern authenti
 | Identity | Auth0 (free tenant) |
 | Fine-grained authz | OpenFGA (local Docker) or Auth0 FGA |
 | MCP | Official C# MCP SDK |
-| Run | Local machine first, GCP Cloud Run optional |
+| Run | Local machine, then Docker Compose (Stage 5). No Cloud Run |
 | Testing | curl or Postman, MCP Inspector |
 | Source control | GitHub repo auth0-dotnet-series, one folder or branch per episode |
 
@@ -72,7 +72,7 @@ auth0-dotnet-series/
 ## A9. Episodes
 | Ep | Topic | Must cover | Status |
 |---|---|---|---|
-| 1 | AuthN vs AuthZ, OIDC, JWT, Auth0 + .NET basics | Login, JWT-protected API, permissions, policy-based authz | In progress: Stages 1-3 done, Stage 4 next |
+| 1 | AuthN vs AuthZ, OIDC, JWT, Auth0 + .NET basics | Login, JWT-protected API, permissions, policy-based authz | In progress: Stages 1-5 done (local Docker Compose, no Cloud Run), Stage 6 next |
 | 2 | Multi-tenant with Auth0 Organizations | Per-tenant login, org claim in token, tenant isolation in API | Not started |
 | 3 | Fine-grained authz with OpenFGA | Relationship model, check API, RBAC vs ReBAC | Not started |
 | 4 | Secure a C# MCP server with Auth0 | OAuth 2.1 for MCP, discovery, client registration, scopes, MCP Inspector | Not started |

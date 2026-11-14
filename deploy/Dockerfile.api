@@ -1,0 +1,21 @@
+# Build context is the repo root (see docker-compose.yml).
+
+# Why: the SDK image compiles the app; the small runtime image below only runs it.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Why: copy the .csproj first so the restore layer is cached until packages change.
+COPY src/DocShare.Api/DocShare.Api.csproj src/DocShare.Api/
+RUN dotnet restore src/DocShare.Api/DocShare.Api.csproj
+
+COPY src/DocShare.Api/ src/DocShare.Api/
+RUN dotnet publish src/DocShare.Api/DocShare.Api.csproj -c Release -o /app --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+COPY --from=build /app .
+
+# Why: plain HTTP inside the container network. Only the web app talks to the API here.
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "DocShare.Api.dll"]

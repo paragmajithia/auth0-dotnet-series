@@ -1,0 +1,9 @@
+# Why: keep the build context small and stop host build output (Windows paths) leaking into the image.
+**/bin
+**/obj
+.git
+.idea
+.vs
+deploy/certs
+deploy/.env
+docs

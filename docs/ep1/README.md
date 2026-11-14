@@ -6,15 +6,12 @@ This episode builds the start of **DocShare**, a small document-sharing API with
 - A free [Auth0](https://auth0.com) account
 - The .NET 10 SDK (check with `dotnet --list-sdks`)
 - An editor such as JetBrains Rider or VS Code
+- Docker Desktop (optional, only for Part 5)
 - Basic knowledge of OAuth (what a token is)
 
-**How to read this**
-1. **Concept:** what authentication, authorization, OIDC and JWT are.
-2. **Auth0 setup:** click-by-click dashboard steps.
-3. **Code:** the two .NET projects.
-4. **Run and test:** start both projects and check each result.
+<img src="overview.svg" alt="Architecture: the browser uses DocShare.Web, which logs in with Auth0 and calls DocShare.Api with a JWT. The API checks the token and answers 200, 401 or 403." width="560">
 
-Click a section to expand or collapse it.
+Click a part below to expand or collapse it.
 
 ---
 
@@ -34,6 +31,8 @@ Click a section to expand or collapse it.
 OIDC is a thin identity layer on top of OAuth 2.0. OAuth alone says what a token can do. OIDC adds who the user is.
 
 ### The flow (Authorization Code + PKCE)
+
+The same flow as the diagram at the top, in more detail:
 
 ```
 Browser       DocShare.Web        Auth0        DocShare.Api
@@ -332,7 +331,7 @@ User-secrets are stored outside the repo, so the secret is never committed. Next
 
 ### Step 1: Set the client secret
 
-Open a terminal in the repo root. In Rider: **View → Tool Windows → Terminal** (Alt+F12). Rider's right-click menu has no standard "set secret" entry in every version, and the terminal works in any editor.
+Open a terminal in the repo root. In Rider: **View → Tool Windows → Terminal** (Alt+F12).
 
 ```bash
 dotnet user-secrets set "Auth0:ClientSecret" "<your-client-secret>" --project src/DocShare.Web
@@ -369,7 +368,7 @@ dotnet run --project src/DocShare.Web
 | DocShare.Api | https://localhost:7002 |
 | DocShare.Web | https://localhost:7001 |
 
-In Rider you can also run both from the **Run** menu (select each project's `https` profile).
+In Rider, open `DocShare.slnx` with **File → Open** (choose to open it as a solution). Then the run configurations `DocShare.Api: https` and `DocShare.Web: https` appear, and you can run each one from the toolbar. If you only opened the folder, Rider shows no run configurations.
 
 ### Step 4: Test
 
@@ -396,5 +395,88 @@ Test 2 proves the API refuses requests without a token. Tests 3 to 5 prove the w
 | **Call API** shows `403` | `permissions` claim missing | In the API settings turn on **Enable RBAC** and **Add Permissions in the Access Token**, and check the user has a role |
 | Connection refused to port 7002 | API is not running | Start `DocShare.Api` first |
 | "Address already in use" | Another process uses 7001 or 7002 | Stop it, or change the port in `launchSettings.json` and update the Auth0 URLs |
+
+</details>
+
+<details>
+<summary><strong>Part 5: Run with Docker Compose</strong></summary>
+
+Runs both projects in containers with one command. Everything stays on your machine, nothing is deployed to the cloud. You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) running.
+
+| | `dotnet run` (Part 4) | Docker Compose (this part) |
+|---|---|---|
+| Web app | https://localhost:7001 | https://localhost:7001 (same, so Auth0 URLs do not change) |
+| API | https://localhost:7002 | http://localhost:7002 (plain HTTP) |
+| Client secret from | user-secrets | `deploy/.env` (gitignored) |
+| Web finds the API at | `https://localhost:7002` | `http://docshare-api:8080` (service name on the compose network) |
+
+New files in `deploy/`:
+
+```
+deploy/
+  docker-compose.yml   both services, ports 7001 and 7002
+  Dockerfile.api       builds DocShare.Api
+  Dockerfile.web       builds DocShare.Web
+  .env.example         copy to .env (gitignored)
+  certs/               exported dev certificate (gitignored)
+```
+
+### Step 1: Export the dev certificate
+
+**Why:** with `dotnet run`, .NET reads the dev certificate straight from Windows, so you never typed a password. A Linux container cannot see the Windows certificate store, so we export the certificate to a file. A `.pfx` file must be protected by a password, so you invent one now. It is not an Auth0 value. It only locks this local file, and any value works (for example `localdev123`).
+
+```bash
+dotnet dev-certs https -ep deploy/certs/aspnetapp.pfx -p "localdev123"
+```
+
+You can use your own password instead of `localdev123`. The `.pfx` file is gitignored. Remember the password, because Step 2 needs it. The command may print "A valid HTTPS certificate is already present". That is normal, and the file is still written.
+
+### Step 2: Create `deploy/.env`
+
+```bash
+cp deploy/.env.example deploy/.env
+```
+
+Open `deploy/.env` and set two values:
+
+| Variable | What to put |
+|---|---|
+| `AUTH0_CLIENT_SECRET` | The same Client Secret you gave to user-secrets (DocShare Web → Settings → Client Secret in Auth0). Containers cannot read your user-secrets, so it is repeated here. |
+| `CERT_PASSWORD` | The password from Step 1 (`localdev123` in the example) |
+
+Put each value on its own line, with no quotes and no spaces:
+
+```
+AUTH0_CLIENT_SECRET=<your-client-secret>
+CERT_PASSWORD=localdev123
+```
+
+This file is gitignored. Never commit it.
+
+### Step 3: Start
+
+Stop any `dotnet run` copies first, because they use the same ports.
+
+```bash
+docker compose -f deploy/docker-compose.yml up --build
+```
+
+Open https://localhost:7001, log in, and click **Call API**. You should see the same `200 OK` as in Part 4. Check the API directly with `curl http://localhost:7002/health`.
+
+Stop everything:
+
+```bash
+docker compose -f deploy/docker-compose.yml down
+```
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| "required variable ... is missing" | `deploy/.env` not created or incomplete | Repeat Step 2 |
+| Web container exits: "certificate data cannot be read with the provided password" | `CERT_PASSWORD` does not exactly match the Step 1 password (often extra text on the same line), or there is no `.pfx` in `deploy/certs` | Make sure `CERT_PASSWORD` is alone on its line in `deploy/.env`, or repeat Step 1 |
+| "port is already allocated" | `dotnet run` or another app uses 7001 or 7002 | Stop it |
+| **Call API** fails to connect | API container is not running | Check `docker compose -f deploy/docker-compose.yml ps` |
+| Cannot connect to the Docker daemon | Docker Desktop is not running | Start Docker Desktop |
 
 </details>
