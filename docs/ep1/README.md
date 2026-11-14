@@ -12,6 +12,7 @@ This episode builds the start of **DocShare**, a small document-sharing API with
 1. **Concept:** what authentication, authorization, OIDC and JWT are.
 2. **Auth0 setup:** click-by-click dashboard steps.
 3. **Code:** the two .NET projects.
+4. **Run and test:** start both projects and check each result.
 
 Click a section to expand or collapse it.
 
@@ -205,6 +206,7 @@ The web app does the AuthN (logs the user in). The API from Step 2 does the Auth
 | Allowed Web Origins | `https://localhost:7001` |
 
 4. Save. On the **Connections** tab, make sure Username-Password-Authentication is enabled.
+5. Let this app get tokens for the API. Go to **Applications → APIs → DocShare API → Application Access**, find `DocShare Web`, click **Edit**, set **User Access** to **Authorized**, select all three permissions (it should show **3 / 3 permissions granted**) and save. Without this, login fails with "Client is not authorized to access resource server". Granting all three only makes them *available* to the app. Each user still gets just the permissions of their own role.
 
 ### Step 6: Create fake users
 
@@ -322,5 +324,77 @@ dotnet user-secrets set "Auth0:ClientSecret" "<your-client-secret>" --project sr
 ```
 
 User-secrets are stored outside the repo, so the secret is never committed. Next, Part 4 runs both projects and tests them.
+
+</details>
+
+<details>
+<summary><strong>Part 4: Run and test</strong></summary>
+
+### Step 1: Set the client secret
+
+Open a terminal in the repo root. In Rider: **View → Tool Windows → Terminal** (Alt+F12). Rider's right-click menu has no standard "set secret" entry in every version, and the terminal works in any editor.
+
+```bash
+dotnet user-secrets set "Auth0:ClientSecret" "<your-client-secret>" --project src/DocShare.Web
+```
+
+Check it was stored (this prints the value, so do not paste the output anywhere):
+
+```bash
+dotnet user-secrets list --project src/DocShare.Web
+```
+
+**Why:** `DocShare.Web` reads `Auth0:ClientSecret` at start-up. User-secrets are only loaded in the `Development` environment, which the launch profile sets.
+
+### Step 2: Trust the dev certificate (once)
+
+```bash
+dotnet dev-certs https --trust
+```
+
+### Step 3: Start both projects
+
+Use two terminals, one per project:
+
+```bash
+dotnet run --project src/DocShare.Api
+```
+
+```bash
+dotnet run --project src/DocShare.Web
+```
+
+| Project | URL |
+|---|---|
+| DocShare.Api | https://localhost:7002 |
+| DocShare.Web | https://localhost:7001 |
+
+In Rider you can also run both from the **Run** menu (select each project's `https` profile).
+
+### Step 4: Test
+
+| # | Test | Expected |
+|---|---|---|
+| 1 | `curl https://localhost:7002/health` | `200` and `{"status":"ok"}` |
+| 2 | `curl -i https://localhost:7002/documents` (no token) | `401` |
+| 3 | Open https://localhost:7001, click **Login**, sign in as `alice@acme.test` | Redirected to `/profile`, claims table shown |
+| 4 | Click **Call API** | `200 OK` and the 4 fake documents |
+| 5 | Log out, then log in as `carol@globex.test` and click **Call API** | `200 OK` (a viewer has `read:documents`) |
+
+Test 2 proves the API refuses requests without a token. Tests 3 to 5 prove the whole flow: login, access token for the right audience, API accepts it.
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Auth0 error "callback URL mismatch" | Callback URL in Auth0 does not match the app | Allowed Callback URLs must be exactly `https://localhost:7001/callback` |
+| Login fails: "Client is not authorized to access resource server" | `DocShare Web` is not allowed to get tokens for the API | Part 2, Step 5, item 5: set **User Access** to **Authorized** on the API's **Application Access** tab |
+| Error about a missing client secret at login | Secret not set, or not running as `Development` | Repeat Step 1 and start with the `https` launch profile |
+| Browser warns the certificate is not trusted | Dev certificate not trusted | Repeat Step 2 and restart the browser |
+| **Call API** shows `401` | Token audience or domain does not match the API | `Audience` and `Domain` in both `appsettings.json` files must match Auth0 |
+| **Call API** shows `401` and the token has no dots (opaque) | Web app did not ask for the API audience | Check `Auth0:Audience` in `DocShare.Web/appsettings.json` |
+| **Call API** shows `403` | `permissions` claim missing | In the API settings turn on **Enable RBAC** and **Add Permissions in the Access Token**, and check the user has a role |
+| Connection refused to port 7002 | API is not running | Start `DocShare.Api` first |
+| "Address already in use" | Another process uses 7001 or 7002 | Stop it, or change the port in `launchSettings.json` and update the Auth0 URLs |
 
 </details>

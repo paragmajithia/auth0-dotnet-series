@@ -26,6 +26,9 @@ builder.Services
         options.Audience = audience;
     });
 
+// Why: RequireAuthorization() on /profile and /call-api needs the authorization services registered.
+builder.Services.AddAuthorization();
+
 // Why: HttpClientFactory gives us a ready HttpClient for calling DocShare.Api.
 builder.Services.AddHttpClient("DocShareApi", client =>
 {
